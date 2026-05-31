@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fnmap"
+version = "0.1.0"
+description = "Build high-resolution Fortnite map images from fortnite.gg tiles."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+authors = [
+  { name = "crypoxyz" }
+]
+dependencies = [
+  "Pillow>=9.5,<13",
+  "requests>=2.28,<3",
+]
+
+[project.scripts]
+fnmap = "fnmap.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["fnmap*"]

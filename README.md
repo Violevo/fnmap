@@ -1,31 +1,65 @@
-![Header](./.github/github-header-image.png)
+# fnmap
 
-[![Discord](https://img.shields.io/badge/Discord-%235865F2.svg?style=for-the-badge&logo=discord&logoColor=white)](https://discord.crpxz.dev)
+Build high-resolution Fortnite map images from fortnite.gg map tiles.
 
-## features
+The current implementation downloads WebP tiles for a selected patch and zoom level, skips blank background tiles when possible, and streams the final PNG to disk row-by-row so very large maps can be produced without holding the full image in memory.
 
-- download fortnite map tiles in 7 different qualities
-- choose which patch the map should be from
-- merge downloaded tiles to a full, high quality map (up to 16.384 x 16.384 px)
+## Features
 
-## instructions
+- Build map images from 256 px up to 32,768 px.
+- Choose the Fortnite patch to download.
+- Render blank areas either as fortnite.gg grey squares or transparent pixels.
+- Use the interactive prompts or pass CLI flags for repeatable builds.
+- Optionally keep downloaded tiles for debugging or reuse.
 
-1. [download](https://github.com/crypoxyz/fnmap/archive/refs/heads/main.zip) or clone this repository:
+## Setup
 
-   `git clone https://github.com/crypoxyz/fnmap.git`
+```powershell
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+```
 
-2. install the requirements from `requirements.txt` using pip:
+On macOS or Linux:
 
-   `pip install -r requirements.txt`
+```sh
+python3 -m venv .venv
+./.venv/bin/python -m pip install -r requirements.txt
+```
 
-3. run `main.py` in the root directory:
+## Usage
 
-   `python3 main.py`
+Interactive mode:
 
-4. tell the script the wanted map-quality and if you either want to download the map tiles or merge existing ones to a full map
+```powershell
+.\.venv\Scripts\python.exe main.py
+```
 
-optional: download the wanted map `quality_tiles.zip` from the [releases](https://github.com/crypoxyz/fnmap/releases) section and extract them into the corresponding folder if the script-download takes too long
+Scripted mode:
 
-## license
+```powershell
+.\.venv\Scripts\python.exe main.py --zoom 6 --patch 40.40 --transparent-blanks
+```
 
-[mit](https://choosealicense.com/licenses/mit/)
+Useful options:
+
+```text
+--zoom 0-7              Build resolution, where 0 is 256 px and 7 is 32,768 px.
+--patch PATCH           fortnite.gg patch, for example 40.40.
+--include-blanks        Render blank areas as grey background pixels.
+--transparent-blanks    Render blank areas as transparent pixels.
+--cache-dir PATH        Directory for temporary downloaded tiles.
+--output-dir PATH       Directory for generated PNG files.
+--keep-tiles            Keep downloaded tile files after the PNG is built.
+```
+
+Generated files are written to `output/maps/` by default. Tile downloads are stored under `cache/tiles/` while the build runs.
+
+## Tests
+
+```powershell
+.\.venv\Scripts\python.exe -m unittest discover
+```
+
+## License
+
+MIT
