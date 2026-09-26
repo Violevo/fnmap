@@ -134,9 +134,6 @@ class FortniteMapBuilder:
 
     def _tile_dir(self, options, provider):
         patch_name = options.patch.replace(".", "_")
-        if provider.key == DEFAULT_PROVIDER:
-            return options.cache_dir / f"patch_{patch_name}" / f"zoom_{options.zoom}"
-
         return options.cache_dir / provider.key / f"patch_{patch_name}" / f"zoom_{options.zoom}"
 
     def _tile_path(self, tile_dir, x, y):

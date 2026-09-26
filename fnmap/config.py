@@ -12,7 +12,6 @@ BACKGROUND_TOLERANCE = 3
 BACKGROUND_UNIFORMITY_TOLERANCE = 8
 
 DEFAULT_PROVIDER = "fortnitegg"
-NADROPS_PATCH = "42.00"
 DROPMAZTER_PATCH = "42.00"
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
@@ -60,21 +59,6 @@ TILE_PROVIDERS = {
         output_prefix="fortnite_map",
         referer="https://fortnite.gg/",
     ),
-    "nadrops": TileProvider(
-        key="nadrops",
-        label="nadrops",
-        url_template=(
-            "https://hoqugussrmehlscfkpvh.supabase.co/storage/v1/object/public/"
-            "{patch}_br_tiles_v2/{zoom}/{x}/{y}.webp"
-        ),
-        default_patch=NADROPS_PATCH,
-        min_zoom=1,
-        max_zoom=MAX_ZOOM,
-        background_color=(0, 2, 3),
-        background_tolerance=8,
-        background_uniformity_tolerance=8,
-        output_prefix="nadrops_map",
-    ),
     "dropmazter": TileProvider(
         key="dropmazter",
         label="dropmazter",
@@ -93,7 +77,6 @@ PROVIDER_ALIASES = {
     "fortnitegg": "fortnitegg",
     "fortnite.gg": "fortnitegg",
     "fortnite": "fortnitegg",
-    "nadrops": "nadrops",
     "dropmazter": "dropmazter",
     "dropmaster": "dropmazter",
 }

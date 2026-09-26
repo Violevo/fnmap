@@ -49,7 +49,7 @@ def parse_args(argv=None):
     parser.add_argument(
         "--provider",
         type=parse_provider,
-        help="tile provider to use: fortnitegg, nadrops, or dropmazter",
+        help="tile provider to use: fortnitegg or dropmazter",
     )
     parser.add_argument(
         "--zoom",
@@ -71,7 +71,12 @@ def parse_args(argv=None):
         help="render blank map tiles as transparent pixels",
     )
 
-    parser.add_argument("--cache-dir", type=Path, default=BuildOptions.cache_dir, help="tile cache directory")
+    parser.add_argument(
+        "--cache-dir",
+        type=Path,
+        default=BuildOptions.cache_dir,
+        help="download directory; cleared after a successful build unless --keep-tiles is set",
+    )
     parser.add_argument("--output-dir", type=Path, default=BuildOptions.output_dir, help="final map output directory")
     parser.add_argument("--keep-tiles", action="store_true", help="keep downloaded tiles after the PNG is built")
 
