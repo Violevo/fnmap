@@ -6,12 +6,13 @@ import requests
 from PIL import Image
 
 from .config import (
-    BASE_TILE_URL,
+    DEFAULT_PROVIDER,
     DEFAULT_CACHE_DIR,
     DEFAULT_OUTPUT_DIR,
     PATCH,
     TILE_SIZE,
     full_tile_area,
+    get_provider,
     map_tile_area,
     resolution_for_zoom,
 )
@@ -22,6 +23,7 @@ from .image_tools import blank_row, is_background_image, is_background_tile, wri
 class BuildOptions:
     zoom: int
     include_blank_tiles: bool
+    provider: str = DEFAULT_PROVIDER
     patch: str = PATCH
     cache_dir: Path = DEFAULT_CACHE_DIR
     output_dir: Path = DEFAULT_OUTPUT_DIR
@@ -31,22 +33,35 @@ class BuildOptions:
 class FortniteMapBuilder:
     def __init__(self):
         self.session = requests.Session()
+        self.session.headers.update(
+            {
+                "User-Agent": (
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                    "AppleWebKit/537.36 (KHTML, like Gecko) "
+                    "Chrome/140.0.0.0 Safari/537.36"
+                ),
+                "Accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+            }
+        )
 
     def build(self, options):
+        provider = get_provider(options.provider)
+        provider.validate_zoom(options.zoom)
+
         output_area = full_tile_area(options.zoom)
         download_area = output_area if options.include_blank_tiles else map_tile_area(options.zoom)
-        tile_dir = self._tile_dir(options)
-        output_path = self._output_path(options)
+        tile_dir = self._tile_dir(options, provider)
+        output_path = self._output_path(options, provider)
 
-        self._download_tiles(options, download_area, tile_dir)
-        self._write_map(options, output_area, tile_dir, output_path)
+        self._download_tiles(options, provider, download_area, tile_dir)
+        self._write_map(options, provider, output_area, tile_dir, output_path)
 
         if not options.keep_tiles:
             shutil.rmtree(tile_dir)
 
         return output_path
 
-    def _download_tiles(self, options, area, tile_dir):
+    def _download_tiles(self, options, provider, area, tile_dir):
         tile_dir.mkdir(parents=True, exist_ok=True)
         total = area.tile_width * area.tile_height
 
@@ -56,16 +71,21 @@ class FortniteMapBuilder:
                 print(f"{index}/{total} cached tile {x},{y}")
                 continue
 
-            tile_data = self._fetch_tile(options.patch, options.zoom, x, y)
+            tile_data = self._fetch_tile(provider, options.patch, options.zoom, x, y)
 
-            if is_background_tile(tile_data):
+            if is_background_tile(
+                tile_data,
+                provider.background_color,
+                provider.background_tolerance,
+                provider.background_uniformity_tolerance,
+            ):
                 print(f"{index}/{total} blank tile {x},{y}")
                 continue
 
             tile_path.write_bytes(tile_data)
             print(f"{index}/{total} downloaded tile {x},{y}")
 
-    def _write_map(self, options, area, tile_dir, output_path):
+    def _write_map(self, options, provider, area, tile_dir, output_path):
         width = resolution_for_zoom(options.zoom)
         height = resolution_for_zoom(options.zoom)
         print(f"building {width} x {height} PNG")
@@ -74,12 +94,12 @@ class FortniteMapBuilder:
             output_path=output_path,
             width=width,
             height=height,
-            row_images=self._iter_rows(options, area, tile_dir),
+            row_images=self._iter_rows(options, provider, area, tile_dir),
         )
 
-    def _iter_rows(self, options, area, tile_dir):
+    def _iter_rows(self, options, provider, area, tile_dir):
         for y in range(area.y_start, area.y_end):
-            row = blank_row(area.pixel_width, options.include_blank_tiles)
+            row = blank_row(area.pixel_width, options.include_blank_tiles, provider.background_color)
 
             for x in range(area.x_start, area.x_end):
                 tile_path = self._tile_path(tile_dir, x, y)
@@ -87,7 +107,12 @@ class FortniteMapBuilder:
                     continue
 
                 with Image.open(tile_path) as tile_image:
-                    if not options.include_blank_tiles and is_background_image(tile_image):
+                    if not options.include_blank_tiles and is_background_image(
+                        tile_image,
+                        provider.background_color,
+                        provider.background_tolerance,
+                        provider.background_uniformity_tolerance,
+                    ):
                         continue
 
                     row.paste(tile_image.convert("RGBA"), ((x - area.x_start) * TILE_SIZE, 0))
@@ -95,9 +120,10 @@ class FortniteMapBuilder:
             print(f"merged row {y + 1}/{area.y_end}")
             yield row
 
-    def _fetch_tile(self, patch, zoom, x, y):
-        url = f"{BASE_TILE_URL}/{patch}/{zoom}/{x}/{y}.webp"
-        response = self.session.get(url, timeout=30)
+    def _fetch_tile(self, provider, patch, zoom, x, y):
+        url = provider.tile_url(patch, zoom, x, y)
+        headers = {"Referer": provider.referer} if provider.referer else None
+        response = self.session.get(url, headers=headers, timeout=30)
         response.raise_for_status()
 
         content_type = response.headers.get("content-type", "")
@@ -106,16 +132,19 @@ class FortniteMapBuilder:
 
         return response.content
 
-    def _tile_dir(self, options):
+    def _tile_dir(self, options, provider):
         patch_name = options.patch.replace(".", "_")
-        return options.cache_dir / f"patch_{patch_name}" / f"zoom_{options.zoom}"
+        if provider.key == DEFAULT_PROVIDER:
+            return options.cache_dir / f"patch_{patch_name}" / f"zoom_{options.zoom}"
+
+        return options.cache_dir / provider.key / f"patch_{patch_name}" / f"zoom_{options.zoom}"
 
     def _tile_path(self, tile_dir, x, y):
         return tile_dir / f"tile_{x}_{y}.webp"
 
-    def _output_path(self, options):
+    def _output_path(self, options, provider):
         patch_name = options.patch.replace(".", "_")
         resolution = resolution_for_zoom(options.zoom)
         blank_mode = "with_blanks" if options.include_blank_tiles else "transparent_blanks"
-        filename = f"fortnite_map_{patch_name}_z{options.zoom}_{resolution}_{blank_mode}.png"
+        filename = f"{provider.output_prefix}_{patch_name}_z{options.zoom}_{resolution}_{blank_mode}.png"
         return options.output_dir / filename

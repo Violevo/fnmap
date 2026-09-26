@@ -4,22 +4,32 @@ import zlib
 
 from PIL import Image, ImageStat
 
-from .config import BACKGROUND_COLOR, BACKGROUND_TOLERANCE, TILE_SIZE
+from .config import BACKGROUND_COLOR, BACKGROUND_TOLERANCE, BACKGROUND_UNIFORMITY_TOLERANCE, TILE_SIZE
 
 
-def is_background_tile(image_data):
+def is_background_tile(
+    image_data,
+    background_color=BACKGROUND_COLOR,
+    color_tolerance=BACKGROUND_TOLERANCE,
+    uniformity_tolerance=BACKGROUND_UNIFORMITY_TOLERANCE,
+):
     with Image.open(BytesIO(image_data)) as image:
-        return is_background_image(image)
+        return is_background_image(image, background_color, color_tolerance, uniformity_tolerance)
 
 
-def is_background_image(image):
+def is_background_image(
+    image,
+    background_color=BACKGROUND_COLOR,
+    color_tolerance=BACKGROUND_TOLERANCE,
+    uniformity_tolerance=BACKGROUND_UNIFORMITY_TOLERANCE,
+):
     image = image.convert("RGB")
-    extrema = ImageStat.Stat(image).extrema
+    stats = ImageStat.Stat(image)
 
     return all(
-        abs(channel_min - BACKGROUND_COLOR[index]) <= BACKGROUND_TOLERANCE
-        and abs(channel_max - BACKGROUND_COLOR[index]) <= BACKGROUND_TOLERANCE
-        for index, (channel_min, channel_max) in enumerate(extrema)
+        abs(channel_mean - background_color[index]) <= color_tolerance
+        and channel_stddev <= uniformity_tolerance
+        for index, (channel_mean, channel_stddev) in enumerate(zip(stats.mean, stats.stddev))
     )
 
 
@@ -53,8 +63,8 @@ def write_streamed_png(output_path, width, height, row_images):
         _write_chunk(output, b"IEND", b"")
 
 
-def blank_row(width, include_blank_tiles):
-    color = BACKGROUND_COLOR + (255,) if include_blank_tiles else (0, 0, 0, 0)
+def blank_row(width, include_blank_tiles, background_color=BACKGROUND_COLOR):
+    color = background_color + (255,) if include_blank_tiles else (0, 0, 0, 0)
     return Image.new("RGBA", (width, TILE_SIZE), color)
 
 

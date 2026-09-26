@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from pathlib import Path
 
-PATCH = "40.40"
+PATCH = "42.03"
 BASE_TILE_URL = "https://fortnite.gg/maps"
 TILE_SIZE = 256
 MIN_ZOOM = 0
@@ -9,6 +9,11 @@ MAX_ZOOM = 7
 
 BACKGROUND_COLOR = (47, 49, 55)
 BACKGROUND_TOLERANCE = 3
+BACKGROUND_UNIFORMITY_TOLERANCE = 8
+
+DEFAULT_PROVIDER = "fortnitegg"
+NADROPS_PATCH = "42.00"
+DROPMAZTER_PATCH = "42.00"
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
 DEFAULT_CACHE_DIR = ROOT_DIR / "cache" / "tiles"
@@ -19,6 +24,92 @@ MAP_LEFT = 29.71
 MAP_TOP = 36.02
 MAP_RIGHT = 213.37
 MAP_BOTTOM = 230.53
+
+
+@dataclass(frozen=True)
+class TileProvider:
+    key: str
+    label: str
+    url_template: str
+    default_patch: str
+    min_zoom: int
+    max_zoom: int
+    background_color: tuple[int, int, int]
+    background_tolerance: int = BACKGROUND_TOLERANCE
+    background_uniformity_tolerance: int = BACKGROUND_UNIFORMITY_TOLERANCE
+    output_prefix: str = "fortnite_map"
+    referer: str | None = None
+
+    def tile_url(self, patch, zoom, x, y):
+        return self.url_template.format(patch=patch, zoom=zoom, x=x, y=y)
+
+    def validate_zoom(self, zoom):
+        if zoom < self.min_zoom or zoom > self.max_zoom:
+            raise ValueError(f"{self.label} supports zoom levels {self.min_zoom}-{self.max_zoom}")
+
+
+TILE_PROVIDERS = {
+    "fortnitegg": TileProvider(
+        key="fortnitegg",
+        label="fortnite.gg",
+        url_template=BASE_TILE_URL + "/{patch}/{zoom}/{x}/{y}.webp",
+        default_patch=PATCH,
+        min_zoom=MIN_ZOOM,
+        max_zoom=MAX_ZOOM,
+        background_color=BACKGROUND_COLOR,
+        output_prefix="fortnite_map",
+        referer="https://fortnite.gg/",
+    ),
+    "nadrops": TileProvider(
+        key="nadrops",
+        label="nadrops",
+        url_template=(
+            "https://hoqugussrmehlscfkpvh.supabase.co/storage/v1/object/public/"
+            "{patch}_br_tiles_v2/{zoom}/{x}/{y}.webp"
+        ),
+        default_patch=NADROPS_PATCH,
+        min_zoom=1,
+        max_zoom=MAX_ZOOM,
+        background_color=(0, 2, 3),
+        background_tolerance=8,
+        background_uniformity_tolerance=8,
+        output_prefix="nadrops_map",
+    ),
+    "dropmazter": TileProvider(
+        key="dropmazter",
+        label="dropmazter",
+        url_template="https://dropmazter.com/wp-content/themes/astra/in_house_maps/{patch}/{zoom}/{x}/{y}.webp",
+        default_patch=DROPMAZTER_PATCH,
+        min_zoom=1,
+        max_zoom=MAX_ZOOM,
+        background_color=(40, 49, 64),
+        background_tolerance=8,
+        background_uniformity_tolerance=18,
+        output_prefix="dropmazter_map",
+    ),
+}
+
+PROVIDER_ALIASES = {
+    "fortnitegg": "fortnitegg",
+    "fortnite.gg": "fortnitegg",
+    "fortnite": "fortnitegg",
+    "nadrops": "nadrops",
+    "dropmazter": "dropmazter",
+    "dropmaster": "dropmazter",
+}
+
+
+def normalize_provider_key(provider):
+    key = provider.strip().lower()
+    if key in PROVIDER_ALIASES:
+        return PROVIDER_ALIASES[key]
+
+    choices = ", ".join(TILE_PROVIDERS)
+    raise ValueError(f"unknown provider {provider!r}; choose one of: {choices}")
+
+
+def get_provider(provider):
+    return TILE_PROVIDERS[normalize_provider_key(provider)]
 
 
 @dataclass(frozen=True)

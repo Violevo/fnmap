@@ -1,14 +1,14 @@
 # fnmap
 
-Build high-resolution Fortnite map images from fortnite.gg map tiles.
+Build high-resolution Fortnite map images from web map tiles.
 
-The current implementation downloads WebP tiles for a selected patch and zoom level, skips blank background tiles when possible, and streams the final PNG to disk row-by-row so very large maps can be produced without holding the full image in memory.
+The current implementation downloads WebP tiles from fortnite.gg, nadrops, or dropmazter for a selected patch and zoom level, skips blank background tiles when possible, and streams the final PNG to disk row-by-row so very large maps can be produced without holding the full image in memory.
 
 ## Features
 
 - Build map images from 256 px up to 32,768 px.
-- Choose the Fortnite patch to download.
-- Render blank areas either as fortnite.gg grey squares or transparent pixels.
+- Choose the tile provider and Fortnite patch to download.
+- Render blank areas either as the provider background or transparent pixels.
 - Use the interactive prompts or pass CLI flags for repeatable builds.
 - Optionally keep downloaded tiles for debugging or reuse.
 
@@ -38,14 +38,17 @@ Scripted mode:
 
 ```powershell
 .\.venv\Scripts\python.exe main.py --zoom 6 --patch 40.40 --transparent-blanks
+.\.venv\Scripts\python.exe main.py --provider nadrops --zoom 7 --patch 41.00 --transparent-blanks
+.\.venv\Scripts\python.exe main.py --provider dropmazter --zoom 7 --patch 41.00 --include-blanks
 ```
 
 Useful options:
 
 ```text
---zoom 0-7              Build resolution, where 0 is 256 px and 7 is 32,768 px.
---patch PATCH           fortnite.gg patch, for example 40.40.
---include-blanks        Render blank areas as grey background pixels.
+--provider PROVIDER     Tile provider: fortnitegg, nadrops, or dropmazter.
+--zoom ZOOM             Build resolution. fortnitegg supports 0-7; nadrops and dropmazter support 1-7.
+--patch PATCH           Fortnite patch, for example 41.00. Defaults depend on the provider.
+--include-blanks        Render blank areas as provider background pixels.
 --transparent-blanks    Render blank areas as transparent pixels.
 --cache-dir PATH        Directory for temporary downloaded tiles.
 --output-dir PATH       Directory for generated PNG files.

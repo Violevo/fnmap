@@ -1,6 +1,15 @@
 import unittest
 
-from fnmap.config import MAX_ZOOM, MIN_ZOOM, TILE_SIZE, full_tile_area, map_tile_area, resolution_for_zoom
+from fnmap.config import (
+    MAX_ZOOM,
+    MIN_ZOOM,
+    TILE_SIZE,
+    full_tile_area,
+    get_provider,
+    map_tile_area,
+    normalize_provider_key,
+    resolution_for_zoom,
+)
 
 
 class ConfigTests(unittest.TestCase):
@@ -31,6 +40,27 @@ class ConfigTests(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             full_tile_area(MAX_ZOOM + 1)
+
+    def test_provider_url_patterns(self):
+        self.assertEqual(get_provider("fortnitegg").referer, "https://fortnite.gg/")
+        self.assertEqual(
+            get_provider("nadrops").tile_url("41.00", 1, 0, 0),
+            "https://hoqugussrmehlscfkpvh.supabase.co/storage/v1/object/public/41.00_br_tiles_v2/1/0/0.webp",
+        )
+        self.assertEqual(
+            get_provider("dropmazter").tile_url("41.00", 1, 0, 0),
+            "https://dropmazter.com/wp-content/themes/astra/in_house_maps/41.00/1/0/0.webp",
+        )
+
+    def test_provider_aliases(self):
+        self.assertEqual(normalize_provider_key("fortnite.gg"), "fortnitegg")
+        self.assertEqual(normalize_provider_key("dropmaster"), "dropmazter")
+
+    def test_provider_zoom_validation(self):
+        get_provider("fortnitegg").validate_zoom(0)
+
+        with self.assertRaises(ValueError):
+            get_provider("nadrops").validate_zoom(0)
 
 
 if __name__ == "__main__":

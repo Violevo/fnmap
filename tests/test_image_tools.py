@@ -24,6 +24,11 @@ class ImageToolsTests(unittest.TestCase):
 
         self.assertEqual(row.getpixel((0, 0)), (0, 0, 0, 0))
 
+    def test_blank_row_uses_provider_background(self):
+        row = blank_row(TILE_SIZE, include_blank_tiles=True, background_color=(40, 49, 64))
+
+        self.assertEqual(row.getpixel((0, 0)), (40, 49, 64, 255))
+
     def test_write_streamed_png_writes_valid_png(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
             output_path = Path(tmp_dir) / "map.png"

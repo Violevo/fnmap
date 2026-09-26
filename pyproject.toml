@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "fnmap"
 version = "0.1.0"
-description = "Build high-resolution Fortnite map images from fortnite.gg tiles."
+description = "Build high-resolution Fortnite map images from web map tiles."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { file = "LICENSE" }
